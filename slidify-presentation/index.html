@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Developing Data Products</title>
+  <meta charset="utf-8">
+  <meta name="description" content="Developing Data Products">
+  <meta name="author" content="Giuliano Sposito">
+  <meta name="generator" content="slidify" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/default.css" media="all" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/phone.css" 
+    media="only screen and (max-device-width: 480px)" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/slidify.css" >
+  <link rel="stylesheet" href="libraries/highlighters/highlight.js/css/tomorrow.css" />
+  <base target="_blank"> <!-- This amazingness opens all links in a new tab. -->  <link rel=stylesheet href="./assets/css/ribbons.css"></link>
+
+  
+  <!-- Grab CDN jQuery, fall back to local if offline -->
+  <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.min.js"></script>
+  <script>window.jQuery || document.write('<script src="libraries/widgets/quiz/js/jquery.js"><\/script>')</script> 
+  <script data-main="libraries/frameworks/io2012/js/slides" 
+    src="libraries/frameworks/io2012/js/require-1.0.8.min.js">
+  </script>
+  
+  
+
+</head>
+<body style="opacity: 0">
+  <slides class="layout-widescreen">
+    
+    <!-- LOGO SLIDE -->
+        <slide class="title-slide segue nobackground">
+  <hgroup class="auto-fadein">
+    <h1>Developing Data Products</h1>
+    <h2>Course Project - ShinyApp and Slidify Presentation</h2>
+    <p>Giuliano Sposito<br/>Development Manager</p>
+  </hgroup>
+  <article></article>  
+</slide>
+    
+
+    <!-- SLIDES -->
+    <slide class="" id="slide-1" style="background:;">
+  <hgroup>
+    <h3>The Application Overview</h3>
+  </hgroup>
+  <article data-timings="">
+    <ul>
+<li><p>The application is a simple demonstrative <a href="http://shiny.rstudio.com/">Shiny App</a> made as a course project of  <a href="https://www.coursera.org/course/devdataprod">Developing Data Product</a>, part of <a href="https://www.coursera.org/specializations/jhudatascience">Data Science Specialization</a>, offered by <a href="http://www.jhsph.edu/">John Hopkins Bloomberg School of Plublic Health</a>, at <a href="href=%22http://www.coursera.org">Coursera</a>.</p></li>
+<li><p>The app loads the <a href="https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/mtcars.html">MTCars</a>, <em>Motor Trend Car Road Tests</em> dataset and allow you to plot, using <a href="http://ggplot2.org/">GGPlo2</a>, any numeric dimention agains another numeric dimension.</p></li>
+<li><p>It is possible too, choose a factor dimention to group the data points, and also, show a linear model fitted in the chart itself. The application dynimic handle, in the <strong>Server</strong> code, the options of <strong>Parameter Panel</strong>, defined in the <strong>UI</strong>, to plot a chart in the <strong>Chart Panel</strong>.</p></li>
+<li><p>We slip, and covert, some features in the dataset as <em>numeric</em> to be used as X and Y variables, and as <em>factors</em> to be used as grouping options. At the <strong>UI.R</strong> code, we just split the name of the features to be load in the appropriated input widgets, and at the <strong>server.R</strong> code we also convert the relevant numeric features to factors.</p></li>
+<li><p>The project GitHub, with the source code can be find at: <a href="https://github.com/GiulSposito/DDP-Project">https://github.com/GiulSposito/DDP-Project</a></p></li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-2" style="background:;">
+  <hgroup>
+    <h3>ui.R</h3>
+  </hgroup>
+  <article data-timings="">
+    <p>Defining <em>numeric</em> and <em>factors</em> features and populating the input widgets</p>
+
+<pre><code class="r">numAxis &lt;- c(&quot;mpg&quot;,&quot;disp&quot;,&quot;hp&quot;,&quot;drat&quot;,&quot;wt&quot;,&quot;qsec&quot;)
+facData &lt;- c(&quot;none&quot;,&quot;cyl&quot;,&quot;vs&quot;,&quot;am&quot;,&quot;gear&quot;,&quot;carb&quot;)
+# (...)
+selectInput(&quot;x&quot;,&quot;X Axis&quot;, numAxis),
+selectInput(&quot;y&quot;,&quot;Y Axis&quot;, numAxis),
+radioButtons(&quot;groupBy&quot;,&quot;Group by&quot;, facData),
+</code></pre>
+
+<p>We use a <strong>Conditional Panel</strong> to show or hide an option to facet the chart, if there are no <em>grouping factor</em> defined, this option isn&#39;t showed</p>
+
+<pre><code class="r"># this is condicional, will appear only if a &#39;group by&#39; is choosed
+conditionalPanel(
+  condition=&quot;input.groupBy!=&#39;none&#39;&quot;,
+  checkboxInput(&quot;facet&quot;,&quot;Use facets&quot;) #show a option to &#39;facet&#39; the chart
+), 
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-3" style="background:;">
+  <hgroup>
+    <h3>server.R</h3>
+  </hgroup>
+  <article data-timings="">
+    <p>To build the chart in the server code, we use <code>aes_string</code> to define X and Y variables, instead of <code>aes</code> because we are using the string containing the feature name, passed by input widgets. <code>as.formmula</code> is used to convert the <em>string</em> grouping factor in a <em>formula</em> in the <code>facet_wrap</code>. Also, we use the <em>gramatical</em> aspect of <strong>GGPlot</strong> to add (or not) the <em>facet</em> and the <em>linear</em> regression.</p>
+
+<pre><code class="r">shinyServer(
+  function(input,output){   
+    output$plot &lt;- renderPlot({
+      g &lt;- ggplot(mtcars, aes_string(x=input$x, y=input$y)) + geom_point(size=5) 
+      if (input$groupBy!=&quot;none&quot;) g &lt;- g + aes_string(col=input$groupBy)
+      if (input$lm) g &lt;- g + geom_smooth(method=&quot;lm&quot;)
+      if (input$groupBy!=&quot;none&quot; &amp; input$facet) 
+          g &lt;- g + facet_wrap(as.formula(paste(&quot;~&quot;, input$groupBy)))
+      g + theme_solarized() # add a theme and return g
+    })
+  }
+)
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="" id="slide-4" style="background:;">
+  <hgroup>
+    <h3>GGPlot aes_string example</h3>
+  </hgroup>
+  <article data-timings="">
+    <pre><code class="r">  library(ggplot2); data(mtcars); mtcars$cyl &lt;- as.factor(mtcars$cyl)
+  ggplot(mtcars, aes_string(x=&quot;hp&quot;, y=&quot;mpg&quot;, col=&quot;cyl&quot;)) + geom_point(size=5)
+</code></pre>
+
+<p><img src="assets/fig/unnamed-chunk-4-1.png" alt="plot of chunk unnamed-chunk-4"> </p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+    <slide class="backdrop"></slide>
+  </slides>
+  <div class="pagination pagination-small" id='io2012-ptoc' style="display:none;">
+    <ul>
+      <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=1 title='The Application Overview'>
+         1
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=2 title='ui.R'>
+         2
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=3 title='server.R'>
+         3
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=4 title='GGPlot aes_string example'>
+         4
+      </a>
+    </li>
+  </ul>
+  </div>  <!--[if IE]>
+    <script 
+      src="http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js">  
+    </script>
+    <script>CFInstall.check({mode: 'overlay'});</script>
+  <![endif]-->
+</body>
+  <!-- Load Javascripts for Widgets -->
+  
+  <!-- LOAD HIGHLIGHTER JS FILES -->
+  <script src="libraries/highlighters/highlight.js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+  <!-- DONE LOADING HIGHLIGHTER JS FILES -->
+   
+  </html>
